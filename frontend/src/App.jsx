@@ -1,6 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useState } from 'react';
 import { Bot, CheckCircle2, AlertCircle, X, Maximize2, LoaderCircle } from 'lucide-react';
-import { get, post } from './api';
+import { get, post, setRuntimeToken } from './api';
 import { AppContext } from './context';
 import Layout from './components/Layout';
 import VihziChat from './components/VihziChat';
@@ -32,7 +32,7 @@ export default function App() {
   }, []);
   const logout = useCallback(() => {
     post('/auth/logout', {}).catch(() => {});
-    localStorage.removeItem('retailiq_token'); setSession(null); setVihziOpen(false);
+    setRuntimeToken(null); setSession(null); setVihziOpen(false);
     window.history.replaceState(null, '', window.location.pathname);
   }, []);
   const refreshStore = useCallback(async () => {
@@ -48,7 +48,7 @@ export default function App() {
 
   useEffect(() => {
     // Restore from either the bearer token or the HTTP-only same-origin cookie.
-    get('/auth/me').then((result) => setSession({ ...result, token: localStorage.getItem('retailiq_token') })).catch(() => localStorage.removeItem('retailiq_token')).finally(() => setChecking(false));
+    get('/auth/me').then((result) => setSession({ ...result, token: localStorage.getItem('retailiq_token') })).catch(() => setRuntimeToken(null)).finally(() => setChecking(false));
   }, []);
   useEffect(() => {
     const expired = () => logout();

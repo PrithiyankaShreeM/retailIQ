@@ -1,5 +1,6 @@
 import hashlib
 import hmac
+import logging
 import os
 import secrets
 from datetime import datetime, timedelta
@@ -13,6 +14,7 @@ from .models import User
 SECRET_KEY = os.getenv("SECRET_KEY", "retailiq-local-development-key-change-in-production")
 ALGORITHM = "HS256"
 bearer = HTTPBearer(auto_error=False)
+logger = logging.getLogger("uvicorn.error")
 
 
 def hash_password(password: str) -> str:
@@ -54,17 +56,27 @@ def current_user(
         detail="Your session has expired. Please sign in again.",
         headers={"WWW-Authenticate": "Bearer"},
     )
-    # Bearer tokens support API clients; the HTTP-only cookie keeps browser
-    # sessions reliable even when storage/autofill is restricted by a preview iframe.
-    token = credentials.credentials if credentials else request.cookies.get("retailiq_session")
-    if not token:
-        raise unauthorized
-    try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        user_id = payload.get("sub")
-    except jwt.PyJWTError:
-        raise unauthorized
-    user = db.query(User).filter(User.id == user_id).first()
-    if not user:
-        raise unauthorized
-    return user
+    # Preview proxies and browser extensions may replace Authorization or block
+    # third-party cookies. Accept the fresh runtime header, cookie, and bearer
+    # token independently instead of letting one stale credential veto the rest.
+    candidates = [
+        ("runtime", request.headers.get("x-retailiq-token")),
+        ("bearer", credentials.credentials if credentials else None),
+        ("cookie", request.cookies.get("retailiq_session")),
+    ]
+    present = []
+    for source, token in candidates:
+        if not token:
+            continue
+        present.append(source)
+        try:
+            payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+            user_id = payload.get("sub")
+        except jwt.PyJWTError:
+            continue
+        user = db.query(User).filter(User.id == user_id).first()
+        if user:
+            return user
+    if present:
+        logger.warning("RetailIQ authentication failed; credential sources: %s", present)
+    raise unauthorized

@@ -103,6 +103,10 @@ def test_legacy_demo_password_is_migrated():
         assert "retailiq_session" in login.cookies
         # No Authorization header: the browser cookie must preserve the session.
         assert client.get("/api/dashboard").status_code == 200
+        # A stale proxy/extension Authorization header must not veto the fresh runtime token.
+        client.cookies.clear()
+        runtime_headers = {"X-RetailIQ-Token": login.json()["token"], "Authorization": "Bearer stale.invalid.token"}
+        assert client.get("/api/dashboard", headers=runtime_headers).status_code == 200
         os.environ["SEED_DEMO"] = "true"
         assert client.post("/api/auth/demo").status_code == 200
         assert client.get("/api/auth/me").status_code == 200

@@ -3,7 +3,7 @@ import {
   ArrowRight, Eye, EyeOff, ScanLine, BarChart3, Boxes, ShieldCheck,
   CheckCircle2, Store, Sparkles, LockKeyhole,
 } from 'lucide-react';
-import { post } from '../api';
+import { post, setRuntimeToken } from '../api';
 import { Logo } from '../components/UI';
 import { cx } from '../utils';
 
@@ -24,7 +24,7 @@ export default function Auth({ onAuth }) {
     try {
       const path = isDemo ? '/auth/demo' : isRegister ? '/auth/register' : '/auth/login';
       const result = await post(path, credentials || {});
-      localStorage.setItem('retailiq_token', result.token); onAuth(result);
+      setRuntimeToken(result.token); onAuth(result);
     } catch (err) { setError(err.message); }
     finally { setBusy(false); }
   };
