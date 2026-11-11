@@ -64,7 +64,7 @@ Open **http://localhost:5173**. Vite proxies `/api` to FastAPI, so browser code 
 
 ```text
 Email:    demo@retailiq.in
-Password: demo1234
+Password: Vihzi$Lakshmi#2026
 ```
 
 The demo dashboard is computed from persisted demo products, purchases, sales, and stock movements. Registering a new shop creates a genuinely empty workspace.

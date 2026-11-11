@@ -1,16 +1,23 @@
 from datetime import datetime, timedelta
 from decimal import Decimal
+import os
 import random
 from sqlalchemy.orm import Session
 from .models import User, Store, Product, Sale, SaleItem, Payment, StockMovement, Purchase, PurchaseItem
-from .security import hash_password
+from .security import hash_password, verify_password
 
 DEMO_EMAIL = "demo@retailiq.in"
-DEMO_PASSWORD = "demo1234"
+DEMO_PASSWORD = os.getenv("DEMO_PASSWORD", "Vihzi$Lakshmi#2026")
 
 
 def seed_demo(db: Session):
-    if db.query(User).filter(User.email == DEMO_EMAIL).first():
+    existing = db.query(User).filter(User.email == DEMO_EMAIL).first()
+    if existing:
+        # Safely migrate the original public demo credential without overwriting
+        # a password that a demo user deliberately changed themselves.
+        if verify_password("demo1234", existing.password_hash):
+            existing.password_hash = hash_password(DEMO_PASSWORD)
+            db.commit()
         return
     store = Store(
         name="Lakshmi Provisions",

@@ -1,12 +1,16 @@
 import io
 import os
 import uuid
+from pathlib import Path
 
 os.environ["DATABASE_URL"] = "sqlite:///./test_retailiq.db"
 os.environ["SEED_DEMO"] = "false"
+Path("test_retailiq.db").unlink(missing_ok=True)
 
 from fastapi.testclient import TestClient
 from app.main import app
+from app.database import SessionLocal
+from app.seed import DEMO_EMAIL, DEMO_PASSWORD, seed_demo
 
 
 def register(client, prefix="owner"):
@@ -78,3 +82,20 @@ def test_complete_retail_workflow_and_store_isolation():
         # Another authenticated shop cannot mutate this shop's product.
         forbidden = client.patch(f"/api/products/{product['id']}", headers=other_shop, json={"name": "Not allowed"})
         assert forbidden.status_code == 404
+
+
+def test_legacy_demo_password_is_migrated():
+    with TestClient(app) as client:
+        response = client.post("/api/auth/register", json={
+            "full_name": "Demo Owner", "email": DEMO_EMAIL, "password": "demo1234",
+            "shop_name": "Legacy Demo", "shop_address": "", "contact": "",
+            "business_category": "Grocery",
+        })
+        assert response.status_code == 201
+        db = SessionLocal()
+        try:
+            seed_demo(db)
+        finally:
+            db.close()
+        assert client.post("/api/auth/login", json={"email": DEMO_EMAIL, "password": "demo1234"}).status_code == 401
+        assert client.post("/api/auth/login", json={"email": DEMO_EMAIL, "password": DEMO_PASSWORD}).status_code == 200
