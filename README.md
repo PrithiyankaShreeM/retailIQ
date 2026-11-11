@@ -30,7 +30,7 @@ This repository contains a working React + FastAPI implementation of the supplie
 | Backend | Python 3.11, FastAPI, SQLAlchemy 2, Pydantic 2 |
 | Database | PostgreSQL in production; zero-configuration SQLite for local development |
 | Documents | CSV parser, OpenPyXL for XLSX, pypdf for PDF text extraction |
-| Auth | PBKDF2-SHA256 salted password hashes, HS256 bearer tokens |
+| Auth | PBKDF2-SHA256 hashes, bearer tokens + HTTP-only same-origin session cookies |
 | Testing | Pytest + FastAPI TestClient end-to-end workflow test |
 | Deployment | Multi-stage Dockerfile serving the React build and API from one origin |
 
@@ -137,6 +137,7 @@ docker build -t retailiq .
 docker run -p 8000:8000 \
   -e DATABASE_URL='postgresql+psycopg2://user:password@host:5432/retailiq' \
   -e SECRET_KEY='your-production-secret' \
+  -e COOKIE_SECURE=true \
   -e SEED_DEMO=false retailiq
 ```
 

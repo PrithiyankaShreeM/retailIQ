@@ -98,4 +98,14 @@ def test_legacy_demo_password_is_migrated():
         finally:
             db.close()
         assert client.post("/api/auth/login", json={"email": DEMO_EMAIL, "password": "demo1234"}).status_code == 401
-        assert client.post("/api/auth/login", json={"email": DEMO_EMAIL, "password": DEMO_PASSWORD}).status_code == 200
+        login = client.post("/api/auth/login", json={"email": DEMO_EMAIL, "password": DEMO_PASSWORD})
+        assert login.status_code == 200
+        assert "retailiq_session" in login.cookies
+        # No Authorization header: the browser cookie must preserve the session.
+        assert client.get("/api/dashboard").status_code == 200
+        os.environ["SEED_DEMO"] = "true"
+        assert client.post("/api/auth/demo").status_code == 200
+        assert client.get("/api/auth/me").status_code == 200
+        assert client.post("/api/auth/logout").status_code == 200
+        assert client.get("/api/auth/me").status_code == 401
+        os.environ["SEED_DEMO"] = "false"

@@ -19,10 +19,11 @@ export default function Auth({ onAuth }) {
   const [error, setError] = useState('');
   const [info, setInfo] = useState('');
 
-  const authenticate = async (credentials, isRegister = false) => {
+  const authenticate = async (credentials, isRegister = false, isDemo = false) => {
     setBusy(true); setError(''); setInfo('');
     try {
-      const result = await post(isRegister ? '/auth/register' : '/auth/login', credentials);
+      const path = isDemo ? '/auth/demo' : isRegister ? '/auth/register' : '/auth/login';
+      const result = await post(path, credentials || {});
       localStorage.setItem('retailiq_token', result.token); onAuth(result);
     } catch (err) { setError(err.message); }
     finally { setBusy(false); }
@@ -53,7 +54,7 @@ export default function Auth({ onAuth }) {
           <div><div className="flex items-center justify-between"><label className="label">Password</label><button type="button" onClick={() => setInfo('Password reset email is not configured in this local demo. Use the demo credentials or create a new shop account.')} className="mb-1.5 text-[10px] font-semibold text-forest-600">Forgot password?</button></div><div className="relative"><input required type={showPassword ? 'text' : 'password'} autoComplete="current-password" className="input !py-3 !pr-11" value={login.password} onChange={(e) => setLogin((value) => ({ ...value, password: e.target.value }))} /><button type="button" onClick={() => setShowPassword((value) => !value)} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted">{showPassword ? <EyeOff size={17} /> : <Eye size={17} />}</button></div></div>
           <button disabled={busy} className="btn-primary w-full !py-3.5">{busy ? 'Opening your shop…' : <>Sign in to My Shop <ArrowRight size={17} /></>}</button>
           <div className="flex items-center gap-3 py-1"><div className="h-px flex-1 bg-[#e2e8e3]" /><span className="text-[9px] font-bold uppercase tracking-widest text-muted">or explore instantly</span><div className="h-px flex-1 bg-[#e2e8e3]" /></div>
-          <button type="button" disabled={busy} onClick={() => authenticate(demoCredentials)} className="btn-secondary w-full !py-3.5"><Store size={16} /> Explore Lakshmi Provisions demo</button>
+          <button type="button" disabled={busy} onClick={() => authenticate(null, false, true)} className="btn-secondary w-full !py-3.5"><Store size={16} /> Explore Lakshmi Provisions demo</button>
           <div className="rounded-xl bg-forest-50 p-3 text-center text-[10px] leading-5 text-forest-700"><b>Demo:</b> demo@retailiq.in · Vihzi$Lakshmi#2026<br /><span className="text-forest-600/60">Figures are calculated from persisted demo transactions, not browser-only sample values.</span></div>
         </form> : <form onSubmit={submitRegister} className="space-y-4">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2"><div><label className="label">Your full name *</label><input required minLength="2" autoComplete="name" className="input" value={register.full_name} onChange={(e) => setRegister((v) => ({ ...v, full_name: e.target.value }))} /></div><div><label className="label">Shop name *</label><input required minLength="2" className="input" value={register.shop_name} onChange={(e) => setRegister((v) => ({ ...v, shop_name: e.target.value }))} /></div></div>

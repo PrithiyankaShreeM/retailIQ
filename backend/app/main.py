@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
 
-from fastapi import FastAPI, Depends, HTTPException, UploadFile, File
+from fastapi import FastAPI, Depends, HTTPException, Response, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -29,7 +29,7 @@ from .schemas import (
     PurchaseCreate, StockAdjustment, SettingsUpdate, AssistantQuery, PasswordChange,
 )
 from .security import hash_password, verify_password, create_token, current_user
-from .seed import seed_demo
+from .seed import seed_demo, DEMO_EMAIL
 from .services import (
     money, product_dict, sale_dict, purchase_dict, dashboard_data, forecast_data,
     assistant_reply, sales_stats, day_start,
@@ -76,9 +76,15 @@ def store_payload(user: User):
     }
 
 
-def auth_payload(user: User):
+def auth_payload(user: User, response: Response):
+    token = create_token(user)
+    response.set_cookie(
+        "retailiq_session", token, max_age=7 * 24 * 60 * 60,
+        httponly=True, secure=os.getenv("COOKIE_SECURE", "false").lower() == "true",
+        samesite="lax", path="/",
+    )
     return {
-        "token": create_token(user),
+        "token": token,
         "user": {"id": user.id, "full_name": user.full_name, "email": user.email},
         "store": store_payload(user),
     }
@@ -103,7 +109,7 @@ def health():
 
 
 @app.post("/api/auth/register", status_code=201)
-def register(payload: RegisterRequest, db: Session = Depends(get_db)):
+def register(response: Response, payload: RegisterRequest, db: Session = Depends(get_db)):
     email = str(payload.email).lower()
     if db.query(User).filter(func.lower(User.email) == email).first():
         raise HTTPException(409, "An account with this email already exists")
@@ -120,15 +126,31 @@ def register(payload: RegisterRequest, db: Session = Depends(get_db)):
     db.add(user)
     db.commit()
     db.refresh(user)
-    return auth_payload(user)
+    return auth_payload(user, response)
 
 
 @app.post("/api/auth/login")
-def login(payload: LoginRequest, db: Session = Depends(get_db)):
+def login(response: Response, payload: LoginRequest, db: Session = Depends(get_db)):
     user = db.query(User).filter(func.lower(User.email) == str(payload.email).lower()).first()
     if not user or not verify_password(payload.password, user.password_hash):
         raise HTTPException(401, "Incorrect email or password")
-    return auth_payload(user)
+    return auth_payload(user, response)
+
+
+@app.post("/api/auth/demo")
+def demo_login(response: Response, db: Session = Depends(get_db)):
+    if os.getenv("SEED_DEMO", "true").lower() != "true":
+        raise HTTPException(404, "Demo access is disabled")
+    user = db.query(User).filter(User.email == DEMO_EMAIL).first()
+    if not user:
+        raise HTTPException(404, "Demo shop is not available")
+    return auth_payload(user, response)
+
+
+@app.post("/api/auth/logout")
+def logout(response: Response):
+    response.delete_cookie("retailiq_session", path="/")
+    return {"message": "Signed out"}
 
 
 @app.get("/api/auth/me")

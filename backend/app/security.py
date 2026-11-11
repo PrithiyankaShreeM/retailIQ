@@ -4,7 +4,7 @@ import os
 import secrets
 from datetime import datetime, timedelta
 import jwt
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 from .database import get_db
@@ -45,6 +45,7 @@ def create_token(user: User) -> str:
 
 
 def current_user(
+    request: Request,
     credentials: HTTPAuthorizationCredentials = Depends(bearer),
     db: Session = Depends(get_db),
 ) -> User:
@@ -53,10 +54,13 @@ def current_user(
         detail="Your session has expired. Please sign in again.",
         headers={"WWW-Authenticate": "Bearer"},
     )
-    if not credentials:
+    # Bearer tokens support API clients; the HTTP-only cookie keeps browser
+    # sessions reliable even when storage/autofill is restricted by a preview iframe.
+    token = credentials.credentials if credentials else request.cookies.get("retailiq_session")
+    if not token:
         raise unauthorized
     try:
-        payload = jwt.decode(credentials.credentials, SECRET_KEY, algorithms=[ALGORITHM])
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         user_id = payload.get("sub")
     except jwt.PyJWTError:
         raise unauthorized

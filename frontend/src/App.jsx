@@ -1,6 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useState } from 'react';
 import { Bot, CheckCircle2, AlertCircle, X, Maximize2, LoaderCircle } from 'lucide-react';
-import { get } from './api';
+import { get, post } from './api';
 import { AppContext } from './context';
 import Layout from './components/Layout';
 import VihziChat from './components/VihziChat';
@@ -20,7 +20,7 @@ const validPages = ['shop', 'billing', 'products', 'sales', 'stock', 'forecast',
 
 export default function App() {
   const [session, setSession] = useState(null);
-  const [checking, setChecking] = useState(Boolean(localStorage.getItem('retailiq_token')));
+  const [checking, setChecking] = useState(true);
   const [page, setPage] = useState(() => { const hash = window.location.hash.slice(1); return validPages.includes(hash) ? hash : 'shop'; });
   const [toasts, setToasts] = useState([]);
   const [vihziOpen, setVihziOpen] = useState(false);
@@ -31,6 +31,7 @@ export default function App() {
     window.setTimeout(() => setToasts((current) => current.filter((toast) => toast.id !== id)), 4500);
   }, []);
   const logout = useCallback(() => {
+    post('/auth/logout', {}).catch(() => {});
     localStorage.removeItem('retailiq_token'); setSession(null); setVihziOpen(false);
     window.history.replaceState(null, '', window.location.pathname);
   }, []);
@@ -46,7 +47,7 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (!localStorage.getItem('retailiq_token')) { setChecking(false); return; }
+    // Restore from either the bearer token or the HTTP-only same-origin cookie.
     get('/auth/me').then((result) => setSession({ ...result, token: localStorage.getItem('retailiq_token') })).catch(() => localStorage.removeItem('retailiq_token')).finally(() => setChecking(false));
   }, []);
   useEffect(() => {

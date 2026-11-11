@@ -9,7 +9,7 @@ export async function api(path, options = {}) {
   const headers = { ...(options.headers || {}) };
   if (!(options.body instanceof FormData) && options.body !== undefined) headers['Content-Type'] = 'application/json';
   if (token) headers.Authorization = `Bearer ${token}`;
-  const response = await fetch(`${API_ROOT}${path}`, { ...options, headers });
+  const response = await fetch(`${API_ROOT}${path}`, { ...options, headers, credentials: 'include' });
   if (response.status === 204) return null;
   const data = await response.json().catch(() => ({ detail: 'The server returned an unreadable response.' }));
   if (!response.ok) {

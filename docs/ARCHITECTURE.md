@@ -98,7 +98,7 @@ A future LLM can rephrase grounded responses, but it should receive a typed anal
 
 ## 8. Security and deployment checklist
 
-Implemented: salted PBKDF2 hashes, signed expiring sessions, store-scoped queries, backend validation, idempotency, upload type/size limits, safe filename handling, transaction history, and parameterised SQLAlchemy queries.
+Implemented: salted PBKDF2 hashes, signed expiring sessions, HTTP-only same-origin browser cookies with bearer-token API support, store-scoped queries, backend validation, idempotency, upload type/size limits, safe filename handling, transaction history, and parameterised SQLAlchemy queries. Set `COOKIE_SECURE=true` behind HTTPS in production.
 
 Before a public deployment:
 
